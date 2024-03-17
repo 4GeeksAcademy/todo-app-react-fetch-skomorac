@@ -1,12 +1,101 @@
+body {
+    font-family: "Arial", sans-serif;
+    background-color: #f8f9fa;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  
+  .container {
+    background: #807e7e8e;
+    box-shadow:
+        /* The top layer shadow */ 0 1px 1px rgba(0, 0, 0, 0.15),
+      /* The second layer */ 0 10px 0 -5px #8f8d8d,
+      /* The second layer shadow */ 0 10px 1px -4px rgba(0, 0, 0, 0.15),
+      /* The third layer */ 0 20px 0 -10px #8d8b8b,
+      /* The third layer shadow */ 0 20px 1px -9px rgba(0, 0, 0, 0.15);
+    /* Padding for demo purposes */
+    padding: 30px;
+    width: 200vh;
+    margin-top: 50px;
+  }
+  
+  h1 {
+    text-align: center;
+    color: #343a40;
+  }
+  
+  ul {
+    padding: 0;
+    margin: 0;
+  }
+  
+  li {
+    list-style: none;
+    border: solid 1px #dee2e6;
+    background-color: #ffffff;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    margin-bottom: 10px;
+    border-radius: 4px;
+    transition: background-color 0.3s ease;
+    position: relative;
+  }
+  
+  li .fa-trash {
+    display: none;
+    cursor: pointer;
+    color: #dc3545;
+    font-size: 18px;
+    position: absolute;
+    right: 10px;
+  }
+  
+  li:hover {
+    background-color: #f8f9fa;
+  }
+  
+  li:hover .fa-trash {
+    display: block;
+  }
+  
+  input {
+    width: 100%;
+    border: none;
+    padding: 10px;
+    margin-bottom: 10px;
+    border: solid 1px #ced4da;
+    border-radius: 4px;
+    box-sizing: border-box;
+  }
+  
+  .fa-trash {
+    cursor: pointer;
+    color: #dc3545;
+    font-size: 18px;
+  }
+  
+  .tasks-count {
+    text-align: center;
+    margin-top: 10px;
+    color: #6c757d;
+  }
 
-/* 
-
-    You can write your own styles here...
-    
-    
-    ...Or you can use the import command to include 
-    other sylesheets into your bunde as well, e.j:
-    
-    import 'relative/path/to/stylesheet.scss';
-
-*/
+  .deleteButton {
+    background-color: #ff6347; /* Red */
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    font-size: 16px;
+    cursor: pointer;
+    border-radius: 5px;
+  }
+  
+  .deleteButton:hover {
+    background-color: #d6341d; /* Darker red on hover */
+  }
+  
