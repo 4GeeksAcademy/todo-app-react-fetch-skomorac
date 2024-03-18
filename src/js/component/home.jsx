@@ -5,6 +5,7 @@ import {
   updateUserTodoList,
   deleteUserTodoList
 } from "./testApi";
+import { Analytics } from "@vercel/analytics/react"
 
 const generateUniqueId = () => {
   return '_' + Math.random().toString(36).substr(2, 9);
@@ -150,6 +151,7 @@ const Home = () => {
       {showDeleteAllButton && (
         <button className="deleteButton" onClick={handleDeleteAllTasks}>Delete All Tasks</button>
       )}
+      <Analytics />
     </div>
   );
 };
