@@ -3,13 +3,8 @@ import {
   createUserTodoList,
   getUserTodoList,
   updateUserTodoList,
-  deleteUserTodoList
+  deleteUserTodoList,
 } from "./testApi";
-import { Analytics } from "@vercel/analytics/react"
-
-const generateUniqueId = () => {
-  return '_' + Math.random().toString(36).substr(2, 9);
-};
 
 const Home = () => {
   const [inputValue, setInputValue] = useState("");
@@ -31,8 +26,7 @@ const Home = () => {
     if (inputValue.trim() !== "") {
       const newTask = {
         done: false,
-        id: generateUniqueId(),
-        label: inputValue.trim()
+        label: inputValue.trim(),
       };
       setTodoItems([...todoItems, newTask]);
       setInputValue("");
@@ -40,7 +34,7 @@ const Home = () => {
       try {
         await updateUserTodoList(userName, [...todoItems, newTask]);
       } catch (error) {
-        console.error('Error updating todo list:', error);
+        console.error("Error updating todo list:", error);
       }
     } else {
       alert("Task can't be empty");
@@ -48,24 +42,33 @@ const Home = () => {
   };
 
   const handleEnter = async (e) => {
-    if (e.key === "Enter") {
-      try {
-        const response = await getUserTodoList(userName);
-        if (response.ok) {
-          alert("User already exists. Fetching todo items...");
-          const data = await response.json();
-          setTodoItems(data);
-        }
-      } catch (error) {
-        console.error('Error retrieving todo list:', error);
-        console.log("User does not exist. Creating new user...");
+    if (userName !== "") {
+      if (e.key === "Enter") {
         try {
-          await createUserTodoList(userName);
-          alert("New user created successfully. Now you can add your tasks");
+          const response = await getUserTodoList(userName);
+          if (response.ok) {
+            alert("User already exists. Fetching todo items...");
+            const data = await response.json();
+            setTodoItems(data);
+          }
         } catch (error) {
-          console.error('Error creating new user:', error);
+          console.error("Error retrieving todo list:", error);
+          console.log("User does not exist. Creating new user...");
+          try {
+            await createUserTodoList(userName);
+            alert("New user created successfully. Now you can add your tasks");
+            const response = await getUserTodoList(userName);
+            if (response.ok) {
+              const data = await response.json();
+              setTodoItems(data);
+            }
+          } catch (error) {
+            console.error("Error creating new user:", error);
+          }
         }
       }
+    } else {
+      alert("Username can't be empty");
     }
   };
 
@@ -73,10 +76,10 @@ const Home = () => {
     try {
       await deleteUserTodoList(userName);
       setTodoItems([]);
-      alert('No more tasks left, user is going to be deleted');
+      alert("No more tasks left, user is going to be deleted");
       window.location.reload(); // Reload the page after deleting all tasks
     } catch (error) {
-      console.error('Error deleting all tasks:', error);
+      console.error("Error deleting all tasks:", error);
     }
   };
 
@@ -90,15 +93,29 @@ const Home = () => {
       if (updatedTodoItems.length === 0) {
         // If no tasks remaining, delete user's todo list
         await deleteUserTodoList(userName);
-        alert('No more tasks left. User will be deleted');
+        alert("No more tasks left. User will be deleted");
         window.location.reload(); // Reload the page after deleting the last task
       } else {
         // If tasks remaining, update the todo list
         await updateUserTodoList(userName, updatedTodoItems);
-        console.log('Todo list updated successfully.');
+        console.log("Todo list updated successfully.");
       }
     } catch (error) {
-      console.error('Error updating/deleting todo list:', error);
+      console.error("Error updating/deleting todo list:", error);
+    }
+  };
+
+  const handleCheckbox = (index) => {
+    const updatedTodoItems = [...todoItems];
+    updatedTodoItems[index].done = !updatedTodoItems[index].done;
+    setTodoItems(updatedTodoItems);
+
+    try {
+      // Update the todo list with the new checked/unchecked status
+      updateUserTodoList(userName, updatedTodoItems);
+      console.log("Todo list updated successfully.");
+    } catch (error) {
+      console.error("Error updating todo list:", error);
     }
   };
 
@@ -139,19 +156,32 @@ const Home = () => {
           />
         </li>
         {todoItems.map((item, index) => (
-          <li key={index}>
-            {item.label}{" "}
-            <i
-              className="fas fa-trash"
-              onClick={() => handleDeleteTask(index)}
-            ></i>
-          </li>
+          <div className="taskField" key={index}>
+            <li>
+              <span>
+                <input
+                  className="checkbox"
+                  type="checkbox"
+                  checked={item.done}
+                  onChange={() => handleCheckbox(index)}
+                />
+              </span>
+              <label className={item.done ? "lineThrough" : ""}>
+                {item.label}
+              </label>
+              <i
+                className="fas fa-trash"
+                onClick={() => handleDeleteTask(index)}
+              ></i>
+            </li>
+          </div>
         ))}
       </ul>
       {showDeleteAllButton && (
-        <button className="deleteButton" onClick={handleDeleteAllTasks}>Delete All Tasks</button>
+        <button className="deleteButton" onClick={handleDeleteAllTasks}>
+          Delete All Tasks
+        </button>
       )}
-      <Analytics />
     </div>
   );
 };
