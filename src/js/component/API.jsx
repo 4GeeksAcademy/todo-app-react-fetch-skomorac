@@ -18,6 +18,26 @@ export const createUser = async (userName) => {
   }
 };
 
+export const deleteUser = async (userName) => {
+  try {
+    const response = await fetch(
+      `https://playground.4geeks.com/todo/users/${userName}`,
+      {
+        method: "DELETE",
+      }
+    );
+    if (response.ok) {
+      console.log("User deleted successfully");
+      return true;
+    } else {
+      throw new Error("Failed to delete user");
+    }
+  } catch (error) {
+    console.error("Error deleting user:", error);
+    return false;
+  }
+};
+
 export const fetchAllUsers = async () => {
   try {
     const response = await fetch(`https://playground.4geeks.com/todo/users`);

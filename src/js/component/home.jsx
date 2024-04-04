@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
 import {
   createUser,
@@ -7,6 +7,7 @@ import {
   addTask,
   deleteTask,
   updateTask,
+  deleteUser,
 } from "./API";
 
 import("../../styles/index.css");
@@ -41,34 +42,39 @@ const Home = () => {
   // Function to handle form submit
   const handleSubmit = async (event) => {
     event.preventDefault();
+    // Check if username is empty
+    if (userName.trim() === "") {
+      alert("Username can't be empty. Please enter a username");
+      return; // Stop further execution
+    }
     // Fetch tasks only if userName is not empty
-    if (userName.trim() !== "") {
-      try {
-        // Fetch all users
-        const allUsers = await fetchAllUsers();
-        if (allUsers && allUsers.length > 0) {
-          // Check if the user exists in the list of all users
-          const userExists = allUsers.some((user) => user.name === userName);
-          if (userExists) {
-            console.log("User exists, fetching tasks...");
-            fetchTasks(); // Fetch tasks for the existing user
-          } else {
-            console.log("User does not exist, creating user...");
-            const newUser = await createUser(userName);
-            if (newUser) {
-              console.log("User created successfully:", newUser);
-              fetchTasks(); // Fetch tasks for the newly created user
-              setUsernameSubmitted(true); // Set usernameSubmitted to true after user creation
-            } else {
-              console.error("Failed to create user");
-            }
-          }
+    try {
+      // Fetch all users
+      const allUsers = await fetchAllUsers();
+      if (allUsers && allUsers.length > 0) {
+        // Check if the user exists in the list of all users
+        const userExists = allUsers.some((user) => user.name === userName);
+        if (userExists) {
+          alert("User exists, getting your tasks...");
+          console.log("User exists, fetching tasks...");
+          fetchTasks(); // Fetch tasks for the existing user
         } else {
-          console.error("Failed to fetch all users");
+          console.log("User does not exist, creating user...");
+          const newUser = await createUser(userName);
+          if (newUser) {
+            alert("New user created, you can start adding your tasks");
+            console.log("User created successfully:", newUser);
+            fetchTasks(); // Fetch tasks for the newly created user
+            setUsernameSubmitted(true); // Set usernameSubmitted to true after user creation
+          } else {
+            console.error("Failed to create user");
+          }
         }
-      } catch (error) {
-        console.error("Error handling form submit:", error);
+      } else {
+        console.error("Failed to fetch all users");
       }
+    } catch (error) {
+      console.error("Error handling form submit:", error);
     }
   };
 
@@ -101,17 +107,14 @@ const Home = () => {
   const deleteAllTasks = async () => {
     try {
       // Loop through tasks and delete each one
-      tasks.forEach(async (task) => {
+      for (const task of tasks) {
         await deleteTask(task.id);
-      });
+      }
+
       // After all tasks are deleted, delete the user
-      const response = await fetch(
-        `https://playground.4geeks.com/todo/users/${userName}`,
-        {
-          method: "DELETE",
-        }
-      );
-      if (response.ok) {
+      const isUserDeleted = await deleteUser(userName);
+      if (isUserDeleted) {
+        alert("No more tasks left, user deleted");
         console.log("User deleted successfully");
         // Clear tasks and usernameSubmitted state
         setTasks([]);
@@ -134,6 +137,22 @@ const Home = () => {
         const updatedTasks = tasks.filter((task) => task.id !== todoId);
         setTasks(updatedTasks);
         console.log("Task deleted successfully");
+
+        // Check if tasks array is empty after deleting the task
+        if (updatedTasks.length === 0) {
+          // Delete the user if there are no tasks left
+          const isUserDeleted = await deleteUser(userName);
+          if (isUserDeleted) {
+            alert("No more tasks left, user deleted");
+            console.log("User deleted successfully");
+            // Clear tasks and usernameSubmitted state
+            setTasks([]);
+            setUserName("");
+            setUsernameSubmitted(false);
+          } else {
+            throw new Error("Failed to delete user");
+          }
+        }
       } else {
         console.error("Failed to delete task");
       }
@@ -162,10 +181,17 @@ const Home = () => {
     }
   };
 
+  useEffect(() => {
+    // Fetch tasks when userName changes
+    if (userName && usernameSubmitted) {
+      fetchTasks();
+    }
+  }, [userName, usernameSubmitted]);
+
   return (
     <div className="container">
-      {/* If username is submitted, show title and task input field */}
-      {usernameSubmitted ? (
+      {/* If username is submitted or tasks exist, show title and task input field */}
+      {usernameSubmitted || tasks.length > 0 ? (
         <>
           <h1>{`${userName}'s todo list`}</h1>
           <input
