@@ -1,186 +1,228 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
+
 import {
-  createUserTodoList,
-  getUserTodoList,
-  updateUserTodoList,
-  deleteUserTodoList,
-} from "./testApi";
+  createUser,
+  fetchAllUsers,
+  fetchUsersTasks,
+  addTask,
+  deleteTask,
+  updateTask,
+} from "./API";
+
+import("../../styles/index.css");
 
 const Home = () => {
-  const [inputValue, setInputValue] = useState("");
-  const [todoItems, setTodoItems] = useState([]);
+  // State to store user name
   const [userName, setUserName] = useState("");
-  const [showDeleteAllButton, setShowDeleteAllButton] = useState(false);
+  // State to store tasks
+  const [tasks, setTasks] = useState([]);
+  // State to track whether username is submitted
+  const [usernameSubmitted, setUsernameSubmitted] = useState(false);
+  // State to store new task
+  const [newTask, setNewTask] = useState("");
 
-  useEffect(() => {
-    // Clear username when component mounts
-    setUserName("");
-  }, []);
+  // Function to fetch tasks for the current user
+  const fetchTasks = async () => {
+    if (!userName) return; // If userName is empty, do nothing
+    try {
+      const data = await fetchUsersTasks(userName);
+      setTasks(data.todos || []); // Set tasks to an empty array if no tasks are returned
+    } catch (error) {
+      console.error("Error fetching tasks:", error);
+      setTasks([]); // Set tasks to an empty array if there is an error
+    }
+  };
 
-  useEffect(() => {
-    // Show delete all button if there are tasks
-    setShowDeleteAllButton(todoItems.length > 0);
-  }, [todoItems]);
+  // Function to handle input change for user name
+  const handleUserNameChange = (event) => {
+    setUserName(event.target.value);
+  };
 
-  const handleAddTask = async () => {
-    if (inputValue.trim() !== "") {
-      const newTask = {
-        done: false,
-        label: inputValue.trim(),
-      };
-      setTodoItems([...todoItems, newTask]);
-      setInputValue("");
-
+  // Function to handle form submit
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    // Fetch tasks only if userName is not empty
+    if (userName.trim() !== "") {
       try {
-        await updateUserTodoList(userName, [...todoItems, newTask]);
-      } catch (error) {
-        console.error("Error updating todo list:", error);
-      }
-    } else {
-      alert("Task can't be empty");
-    }
-  };
-
-  const handleEnter = async (e) => {
-    if (userName !== "") {
-      if (e.key === "Enter") {
-        try {
-          const response = await getUserTodoList(userName);
-          if (response.ok) {
-            alert("User already exists. Fetching todo items...");
-            const data = await response.json();
-            setTodoItems(data);
-          }
-        } catch (error) {
-          console.error("Error retrieving todo list:", error);
-          console.log("User does not exist. Creating new user...");
-          try {
-            await createUserTodoList(userName);
-            alert("New user created successfully. Now you can add your tasks");
-            const response = await getUserTodoList(userName);
-            if (response.ok) {
-              const data = await response.json();
-              setTodoItems(data);
+        // Fetch all users
+        const allUsers = await fetchAllUsers();
+        if (allUsers && allUsers.length > 0) {
+          // Check if the user exists in the list of all users
+          const userExists = allUsers.some((user) => user.name === userName);
+          if (userExists) {
+            console.log("User exists, fetching tasks...");
+            fetchTasks(); // Fetch tasks for the existing user
+          } else {
+            console.log("User does not exist, creating user...");
+            const newUser = await createUser(userName);
+            if (newUser) {
+              console.log("User created successfully:", newUser);
+              fetchTasks(); // Fetch tasks for the newly created user
+              setUsernameSubmitted(true); // Set usernameSubmitted to true after user creation
+            } else {
+              console.error("Failed to create user");
             }
-          } catch (error) {
-            console.error("Error creating new user:", error);
           }
+        } else {
+          console.error("Failed to fetch all users");
         }
+      } catch (error) {
+        console.error("Error handling form submit:", error);
       }
-    } else {
-      alert("Username can't be empty");
     }
   };
 
-  const handleDeleteAllTasks = async () => {
-    try {
-      await deleteUserTodoList(userName);
-      setTodoItems([]);
-      alert("No more tasks left, user is going to be deleted");
-      window.location.reload(); // Reload the page after deleting all tasks
-    } catch (error) {
-      console.error("Error deleting all tasks:", error);
+  // Function to handle pressing Enter key
+  const handleKeyPress = (event) => {
+    if (event.key === "Enter") {
+      handleSubmit(event);
     }
   };
 
-  // Function to handle deletion of a task
-  const handleDeleteTask = async (index) => {
-    const updatedTodoItems = [...todoItems];
-    updatedTodoItems.splice(index, 1);
-    setTodoItems(updatedTodoItems);
+  // Function to handle input change for new task
+  const handleNewTaskChange = (event) => {
+    setNewTask(event.target.value);
+  };
 
+  // Function to handle adding new task
+  const handleAddTask = async () => {
+    if (newTask.trim() !== "") {
+      try {
+        await addTask(userName, { label: newTask });
+        fetchTasks(); // Fetch updated tasks after adding new task
+        setNewTask(""); // Clear input field after adding task
+      } catch (error) {
+        console.error("Error adding task:", error);
+      }
+    }
+  };
+
+  // Function to delete all tasks associated with the user
+  const deleteAllTasks = async () => {
     try {
-      if (updatedTodoItems.length === 0) {
-        // If no tasks remaining, delete user's todo list
-        await deleteUserTodoList(userName);
-        alert("No more tasks left. User will be deleted");
-        window.location.reload(); // Reload the page after deleting the last task
+      // Loop through tasks and delete each one
+      tasks.forEach(async (task) => {
+        await deleteTask(task.id);
+      });
+      // After all tasks are deleted, delete the user
+      const response = await fetch(
+        `https://playground.4geeks.com/todo/users/${userName}`,
+        {
+          method: "DELETE",
+        }
+      );
+      if (response.ok) {
+        console.log("User deleted successfully");
+        // Clear tasks and usernameSubmitted state
+        setTasks([]);
+        setUserName("");
+        setUsernameSubmitted(false);
       } else {
-        // If tasks remaining, update the todo list
-        await updateUserTodoList(userName, updatedTodoItems);
-        console.log("Todo list updated successfully.");
+        throw new Error("Failed to delete user");
       }
     } catch (error) {
-      console.error("Error updating/deleting todo list:", error);
+      console.error("Error deleting user:", error);
     }
   };
 
-  const handleCheckbox = (index) => {
-    const updatedTodoItems = [...todoItems];
-    updatedTodoItems[index].done = !updatedTodoItems[index].done;
-    setTodoItems(updatedTodoItems);
-
+  // Function to delete a task by its ID
+  const deleteTaskById = async (todoId) => {
     try {
-      // Update the todo list with the new checked/unchecked status
-      updateUserTodoList(userName, updatedTodoItems);
-      console.log("Todo list updated successfully.");
+      const success = await deleteTask(todoId);
+      if (success) {
+        // Filter out the deleted task from tasks array
+        const updatedTasks = tasks.filter((task) => task.id !== todoId);
+        setTasks(updatedTasks);
+        console.log("Task deleted successfully");
+      } else {
+        console.error("Failed to delete task");
+      }
     } catch (error) {
-      console.error("Error updating todo list:", error);
+      console.error("Error deleting task:", error);
+    }
+  };
+
+  // Function to toggle the status of a task by its ID
+  const toggleTaskStatus = async (todoId) => {
+    try {
+      // Find the task in tasks array
+      const taskToUpdate = tasks.find((task) => task.id === todoId);
+      // Toggle the is_done status
+      taskToUpdate.is_done = !taskToUpdate.is_done;
+      // Update the task using updateTask API function
+      await updateTask(todoId, taskToUpdate);
+      // Update the state of tasks with the modified task
+      const updatedTasks = tasks.map((task) =>
+        task.id === todoId ? taskToUpdate : task
+      );
+      setTasks(updatedTasks);
+      console.log("Task status toggled successfully");
+    } catch (error) {
+      console.error("Error toggling task status:", error);
     }
   };
 
   return (
     <div className="container">
-      <h1>
-        {todoItems.length === 0 ? (
+      {/* If username is submitted, show title and task input field */}
+      {usernameSubmitted ? (
+        <>
+          <h1>{`${userName}'s todo list`}</h1>
           <input
             type="text"
-            value={userName}
-            onChange={(e) => setUserName(e.target.value)}
-            placeholder="Enter user name"
-            onKeyUp={handleEnter}
-          />
-        ) : (
-          `${userName}'s To Do list`
-        )}
-      </h1>
-      <div>
-        Tasks left to complete: <strong>{todoItems.length}</strong>
-      </div>
-      <ul>
-        <li>
-          <input
-            type="text"
-            onChange={(e) => setInputValue(e.target.value)}
-            value={inputValue}
-            onKeyUp={(e) => {
-              if (e.key === "Enter") {
-                handleAddTask();
-              }
+            placeholder="Enter task"
+            value={newTask}
+            onChange={handleNewTaskChange}
+            onKeyPress={(event) => {
+              if (event.key === "Enter") handleAddTask();
             }}
-            placeholder={
-              todoItems.length === 0
-                ? "No tasks, add a task"
-                : "Type to add more tasks"
-            }
           />
-        </li>
-        {todoItems.map((item, index) => (
-          <div className="taskField" key={index}>
-            <li>
-              <span>
-                <input
-                  className="checkbox"
-                  type="checkbox"
-                  checked={item.done}
-                  onChange={() => handleCheckbox(index)}
-                />
-              </span>
-              <label className={item.done ? "lineThrough" : ""}>
-                {item.label}
-              </label>
-              <i
-                className="fas fa-trash"
-                onClick={() => handleDeleteTask(index)}
-              ></i>
-            </li>
+        </>
+      ) : (
+        // Show input field for entering username
+        <h1>
+          <input
+            type="text"
+            placeholder="Enter user name"
+            value={userName}
+            onChange={handleUserNameChange}
+            onKeyPress={handleKeyPress} // Call handleSubmit on Enter key press
+          />
+        </h1>
+      )}
+      {/* Show the rest of the page only if userName is not empty */}
+      {userName && (
+        <>
+          <div>
+            Tasks left to complete: <strong>{tasks.length}</strong>
           </div>
-        ))}
-      </ul>
-      {showDeleteAllButton && (
-        <button className="deleteButton" onClick={handleDeleteAllTasks}>
-          Delete All Tasks
-        </button>
+          <ul>
+            {tasks.map((task, index) => (
+              <li key={index}>
+                <span>
+                  <input
+                    className="checkbox"
+                    type="checkbox"
+                    checked={task.is_done}
+                    onChange={() => toggleTaskStatus(task.id)}
+                  />
+                </span>
+                <label className={task.is_done ? "lineThrough" : ""}>
+                  {task.label}
+                </label>
+                <i
+                  className="fas fa-trash"
+                  onClick={() => deleteTaskById(task.id)}
+                ></i>
+              </li>
+            ))}
+          </ul>
+          {tasks.length > 0 && (
+            <button className="deleteButton" onClick={deleteAllTasks}>
+              Delete All Tasks
+            </button>
+          )}
+        </>
       )}
     </div>
   );
