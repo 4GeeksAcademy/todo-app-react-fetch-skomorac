@@ -1,13 +1,13 @@
 import React from "react";
-import { createRoot } from "react-dom/client";
+import { createRoot } from "react-dom"; // Update import
 
-// include your styles into the webpack bundle
+// Include your styles into the webpack bundle
 import "../styles/index.css";
 
-// import your own components
+// Import your own components
 import Home from "./component/home.jsx";
 
-// render your react application with strict mode
+// Render your React application with strict mode
 createRoot(document.querySelector("#app")).render(
   <React.StrictMode>
     <Home />
